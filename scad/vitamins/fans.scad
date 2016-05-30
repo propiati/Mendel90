@@ -7,8 +7,10 @@
 // based on http://www.thingiverse.com/thing:8063 by MiseryBot, CC license
 
 fan80x38 = [80, 38, 75, 35.75, M4_cap_screw, 40,   4.3, 84];
+fan70x15 = [70, 15, 66, 30.75, M4_cap_screw, 29,   3.8, 70];
 fan60x25 = [60, 25, 57, 25,    M4_cap_screw, 31.5, 3.6, 64];
 fan60x15 = [60, 15, 57, 25,    M4_cap_screw, 29,   2.4, 60];
+fan40x11 = [40, 11, 37, 16,    M3_cap_screw, 25,   10, 100];
 fan30x10 = [30, 10, 27, 12,    M3_cap_screw, 17,   10, 100];
 
 function fan_width(type)          = type[0];
@@ -59,7 +61,7 @@ module fan(type) {
     //Seven Blades
     linear_extrude(height = depth - 1, center = true, convexity = 4, twist = -30, slices = depth / 2)
         for(i= [0 : 6])
-            rotate((360 * i) / 7)
+            rotate([0, 0, (360 * i) / 7])
                 translate([0, -1.5 / 2])
                     square([fan_bore(type) / 2 - 0.75, 1.5]);
 }

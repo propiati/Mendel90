@@ -6,14 +6,18 @@ import shutil
 import sys
 import c14n_stl
 
-source_dir = "scad"
+from bom import source_dir
 
-def bom_to_stls(machine):
+def bom_to_stls(machine, assembly = None):
     #
     # Make a list of all the stls in the BOM
     #
     stl_files = []
-    for line in open(machine + "/bom/bom.txt", "rt").readlines():
+    if assembly:
+        bom = "accessories/%s.txt" % assembly
+    else:
+        bom = "bom.txt"
+    for line in open(machine + "/bom/" + bom, "rt").readlines():
         words = line.split()
         if words:
             last_word = words[-1]
@@ -36,7 +40,7 @@ def stls(machine, parts = None):
     #
     # Set the target machine
     #
-    f = open("scad/conf/machine.scad","wt")
+    f = open(source_dir + "/conf/machine.scad","wt")
     f. write("include <%s_config.scad>\n" % machine);
     f.close()
 
@@ -74,7 +78,7 @@ def stls(machine, parts = None):
                         # Run openscad on the created file
                         #
                         stl_name = target_dir + "/" + module[:-4] + ".stl"
-                        openscad.run("-o", stl_name, stl_maker_name)
+                        openscad.run("-D$bom=1","-o", stl_name, stl_maker_name)
                         c14n_stl.canonicalise(stl_name)
                         targets.remove(stl)
                         #
@@ -87,12 +91,12 @@ def stls(machine, parts = None):
     # List the ones we didn't find
     #
     for module in targets:
-        print "Could not find", module
+        print("Could not find", module)
     return used
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         stls(sys.argv[1], sys.argv[2:])
     else:
-        print "usage: stls [mendel|sturdy|your_machine] [part.stl ...]"
+        print("usage: stls [mendel|sturdy|your_machine] [part.stl ...]")
     sys.exit(1)

@@ -23,7 +23,12 @@ module ball_bearing(type) {
         for(z = [-type[2] / 2, type[2] / 2])
             translate([0,0,z]) difference() {
                 cylinder(r = (type[1] - rim) / 2, h = 2, center = true);
-                cylinder(r = (type[0] + rim) / 2, 2, center = true);
+                cylinder(r = (type[0] + rim) / 2, h = 3, center = true);
             }
     }
+}
+
+module bearing_ball(dia) {
+    vitamin(str("SB",dia * 10,": Steel ball ",dia, "mm"));
+    color(bearing_color) render() sphere(r = dia / 2);
 }

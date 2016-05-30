@@ -20,6 +20,8 @@ angle = 45;
 hook = 8;
 hook_overlap = 3;
 tube_r = 4;
+socket_r = tube_r - min_wall;
+dowel_r = socket_r - 0.1;
 hook_r = 3;
 
 left = left_stay_x + sheet_thickness(frame) / 2;
@@ -27,12 +29,10 @@ right =  right_stay_x - sheet_thickness(frame) / 2;
 spool_x = (left + right) / 2;
 spool_y = gantry_Y + sheet_thickness(frame) + 10 + spool_height(spool) / 2;
 
-holes = psu_hole_list(psu);
-
 bearing_r = (spool_diameter(spool) + ball_bearing_diameter(bearing)) / 2;
 bearing_x = cos(angle) * bearing_r;
 bearing_z = spool_z - sin(angle) * bearing_r;
-bearing_y = spool_width(spool) / 2 + ball_bearing_width(bearing) / 2;
+bearing_y = spool_width(spool) / 2 + ball_bearing_width(bearing) / 2 - washer_thickness(M8_penny_washer);
 
 bracket_width = right - (spool_x + bearing_x);
 bracket_height =  height - bearing_z;
@@ -47,6 +47,8 @@ dy = top_tube_y;
 tube_spacing = sqrt(dx * dx + dy * dy);
 
 width = spool_width(spool) - 2 * (thickness + washer_thickness(M8_washer) + washer_thickness(M8_penny_washer));
+
+function spool_holder_gap() = spool_y - width / 2 - thickness - (gantry_Y + sheet_thickness(frame));
 
 sponge_length = 15;
 sponge_depth  = 15;
@@ -75,7 +77,6 @@ module pie_slice(r, start_angle, end_angle) {
             [R * cos(a2), R * sin(a2)],
             [R * cos(a3), R * sin(a3)],
             [R * cos(a4), R * sin(a4)],
-            [0,0]
        ]);
     }
 }
@@ -166,25 +167,34 @@ module tube(height) {
     difference() {
         union() {
             cylinder(r = tube_r, h = height);
-            cylinder(r = tube_r - min_wall, h = height + thickness - wall - layer_height);        // dowel
+            hull() {
+                cylinder(r = dowel_r, h = height + thickness - wall - 2 * layer_height);              // dowel
+                cylinder(r = dowel_r - layer_height, h = height + thickness - wall - layer_height);   // chamferred end
+            }
         }
         translate([0, 0, wall])
             cylinder(r = tube_r - wall, h = height - 2 * wall);
+
+        translate([0, 0, height - layer_height])                // small hole to force solid layers above
+            cylinder(r = 1, h = layer_height);
+
+        translate([0, 0, height + 3 * layer_height])            // small hole to force solid layers above
+            cylinder(r = dowel_r - min_wall, h = layer_height);
     }
 }
 
 //
 // The outline of the bracket, triangle with rounded corners
 //
-module shape(width, height) {
+module shape(width, height, offset = 0) {
     hull() {
-        circle(washer_diameter(M8_washer) / 2 + 1);
+        circle(washer_diameter(M8_washer) / 2 + 1 + offset);
 
         translate([width - tube_r, height + hook - tube_r])
-            circle(tube_r);
+            circle(tube_r + offset);
 
         translate([width - tube_r, -height + tube_r])
-            circle(tube_r);
+            circle(tube_r + offset);
     }
 }
 //
@@ -197,15 +207,12 @@ module inner_shape(width, height) {
     inset = frame_bar_width + rad;
 
     minkowski() {
-        render() difference() {
+        difference() {
             shape(width, height);
             union() {
-               minkowski() {
+                minkowski() {
                     difference() {
-                        minkowski() {
-                            shape(width, height);
-                            circle(r = 1, center = true);
-                        }
+                        shape(width, height, 1);
                         shape(width, height);
                         translate([width -1, -inset])
                             square([3, 2 * inset + 1]);
@@ -276,7 +283,7 @@ module spool_bracket(width, height, tube) {
                 [top_tube_x, top_tube_y,    thickness],
                 [middle_tube_x, 0,          thickness],
             ]) translate(v)
-                cylinder(r = tube_r - min_wall + 0.1, h = - 2 * tube, center = true);           // socket for dowel
+                cylinder(r = socket_r, h = - 2 * tube, center = true);           // socket for dowel
     }
 }
 //
@@ -298,21 +305,20 @@ module spool_bracket_male_stl() {
 module spool_bracket_assembly(male)
 {
     rotate([-90, 0, 0]) {
-        translate([0, 0, exploded * 30])
+        translate([0, 0, exploded * 15]) {
             ball_bearing(bearing);
 
-        translate([0, 0, ball_bearing_width(bearing) / 2])
-            screw(M8_cap_screw, 30);
+            translate([0, 0, ball_bearing_width(bearing) / 2 + exploded * 5])
+                washer(M8_washer)
+                    translate([0, 0, exploded * 5])
+                        washer(M8_penny_washer)
+                            screw(M8_cap_screw, 30);
+        }
 
         rotate([180, 0, 0])
             translate([0, 0, ball_bearing_width(bearing) / 2]) {
                 translate([0, 0, exploded * -10])
-                    washer(M8_washer);
-
-                translate([0, 0, washer_thickness(M8_washer)]) {
-                    washer(M8_penny_washer);
-
-                    translate([0, 0, washer_thickness(M8_penny_washer)]) {
+                    washer(M8_washer) translate([0, 0, exploded * 5]) group() {
                         if(male)
                             color(plastic_part_color("lime")) render() mirror([0, 1, 0]) spool_bracket_male_stl();
                         else
@@ -320,13 +326,11 @@ module spool_bracket_assembly(male)
 
                         translate([0, 0, thickness]) {
                             translate([0, 0, exploded * 5])
-                                washer(M8_washer);
+                                washer(M8_washer)
+                                    nut(M8_nut, true);
 
-                            translate([0, 0, washer_thickness(M8_washer)])
-                                nut(M8_nut, true);
                         }
                     }
-                }
             }
         if(male)
             translate([right - (spool_x + bearing_x), height - bearing_z - tube_r, -bearing_y]) {
@@ -393,7 +397,7 @@ module spool_assembly(show_spool = true) {
     }
 
 
-    vitamin("PLA3020: PLA sample 3mm ~20m");
+    vitamin("PLA3040: PLA sample 3mm ~50m");
 
     end("spool_holder_assembly");
 }
@@ -437,8 +441,11 @@ module spool_holder_tall_brackets_x4_stl() {
 
 }
 
-if(0)
+if(1)
     translate([0, 0, - spool_z])
         spool_assembly();
 else
-    spool_holder_brackets_stl();
+    if(1)
+        spool_holder_brackets_stl();
+    else
+        dust_filter_stl();

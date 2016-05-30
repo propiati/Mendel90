@@ -7,7 +7,8 @@
 //
 // Washers
 //
-M2p5_washer=      [2.5, 5.9, 0.5, false,  5.4];
+M2_washer =       [2,   5, 0.3, false,  4.5];
+M2p5_washer=      [2.5,5.9,0.5, false,  5.4];
 M3_washer  =      [3,   7, 0.5, false,  5.8];
 M3_penny_washer  =[3,  12, 0.8, false,  5.8];
 M3p5_washer  =    [3.5, 8, 0.5, false,  6.9];
@@ -35,11 +36,12 @@ module washer(type) {
     else
         vitamin(str("WA", hole * 10, diameter, thickness * 10, ": Washer M",        hole, " x ", diameter, "mm x ", thickness, "mm"));
     color(washer_color(type)) render() difference() {
-        cylinder(r = diameter / 2, h = thickness);
+        cylinder(r = diameter / 2, h = thickness - 0.05);
         cylinder(r = hole / 2, h = 2 * thickness + 1, center = true);
     }
-    translate([0, 0, thickness])
-        child();
+    if($children)
+        translate([0, 0, thickness])
+            child();
 }
 
 module star_washer(type) {
@@ -59,6 +61,7 @@ module star_washer(type) {
                 translate([inner + spoke / 2, 0, 0.5])
                     cube([spoke, 2 * 3.142 * inner / 36,  thickness + 1], center = true);
     }
-    translate([0, 0, thickness])
-        child();
+    if($children)
+        translate([0, 0, thickness])
+            child();
 }
